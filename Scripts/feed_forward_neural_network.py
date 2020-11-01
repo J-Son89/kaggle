@@ -55,7 +55,7 @@ def hiddenLayer(layerSize=100, func=sigmoid_neuron, length=784 ):
     # weights matrix as a dataframe 
     layerWeights = numpy.random.normal(0, 1, size=(layerSize,length))
     bias =0 
-    def layer(image): 
+    def activationFunction(image): 
         return func(numpy.dot(layerWeights, image ), bias) 
     def setWeights(newWeights):
         nonlocal layerWeights 
@@ -66,7 +66,7 @@ def hiddenLayer(layerSize=100, func=sigmoid_neuron, length=784 ):
     def getWeights():
         nonlocal layerWeights
         return layerWeights
-    return [layer, getWeights, setWeights]
+    return [activationFunction, getWeights, setWeights]
 
 def gradientDescent(f, gradF, point, stepSize, threshold):
     # thresholdArray = numpy.full(point.shape, threshold)
@@ -80,23 +80,25 @@ def gradientDescent(f, gradF, point, stepSize, threshold):
     return value
   #  return gradientDescent(f, gradF, newPoint, stepSize, threshold)
 
-
-def buildModel(layers):
-    return 1
+# =============================================================================
+def costFunction(approxlabels(weights), labels) :
+    return numpy.linalg.norm(labels, trainModel(getModelweights[0]))
+    
+# =============================================================================
+# epoch=iterations 1 for now
 
 def trainModel(model, getModelWeights, setModelWeights, epochs, labels, images):
     approxLabels = numpy.zeros((len(images)), dtype=object)
     
-    for i in range(epochs):
+    for i in range(epoch):
         for imageIndex, image in enumerate(images):
             layerOutput = numpy.zeros((len(model)+1), dtype=object)
             layerOutput[0] = numpy.transpose(image)
-            for layerIndex, layer in enumerate(model):
-                layerOutput[layerIndex+1] = layer(layerOutput[layerIndex])
-            approxLabels[imageIndex] = l2_loss(labels[imageIndex], layerOutput[-1])    
-            if(approxLabels[imageIndex] > 0.99):
-                for weightIndex, setWeights in enumerate(setModelWeights):
-                    setWeights(gradientDescent(sigmoid_neuron, sigmoid_neuronGrad, numpy.dot(getModelWeights[weightIndex](),  layerOutput[weightIndex]), .5, 3))
+            for layerIndex, activationFunction in enumerate(model):
+                layerOutput[layerIndex+1] = activationFunction(layerOutput[layerIndex])
+            approxLabels[imageIndex] = layerOutput[-1]   
+            newWeights = gradientDescent(costFunction(approxlabels))
+            setModelWeights(newWeights)
     return approxLabels
 #sigmoid_neuronGrad
 
@@ -123,13 +125,11 @@ def feed_forward_network(dataframe, epochs=2, batch_size=100, learning_rate=3.0)
     test_labels, test_images = getLabelsAndImagesInNumpy(test_df)
     
     layer1, getWeights1, setWeights1 = hiddenLayer(100,sigmoid_neuron, 784)
-    layer2, getWeights2, setWeights2 =  hiddenLayer(10,sigmoid_neuron,100)
-    #model = [layer1, layer2]
-    #layer3, layer3Weights = hiddenLayer(10,sigmoid_neuron, 784)
-
-    model = [layer1, layer2]
-    getModelWeights = [ getWeights1, getWeights2]
-    setModelWeights = [ setWeights1, setWeights2]
+    #layer2, getWeights2, setWeights2 =  hiddenLayer(10,sigmoid_neuron,100)
+    
+    model = [layer1]
+    getModelWeights = [ getWeights1]
+    setModelWeights = [ setWeights1]
     x = trainModel(model, getModelWeights,setModelWeights , epochs, train_labels,train_images) 
     
     #testModel(model, test_labels, test_images)
