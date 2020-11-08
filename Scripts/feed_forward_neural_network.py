@@ -32,7 +32,7 @@ class Bunch:
 def perceptron(x,bias=0):
     return 1 if x > bias else 0
 
-def sigmoid_neuron(x, bias=1):
+def sigmoid_neuron(x, bias=0):
     return 1/(1+ numpy.exp(-x-bias))
 
 def sigmoid_neuronGrad(x):
@@ -63,7 +63,9 @@ def hiddenLayer(layerSize=100, length=784, func=sigmoid_neuron, bias=0 ):
         return func(numpy.dot(weights, inputValue ), bias)
     ## derivative of sigmoidNeuron = (SN)*(1-SN)
     def gradientActivationFunction(inputValue, weights=layerWeights): 
-        return func(numpy.dot(weights, inputValue ))* (1-func(numpy.dot(weights, inputValue )))
+        nonlocal layerWeights 
+        #return sigmoid_neuronGrad(layerWeights)
+        return func( weights )* (1-func(weights))
     def setWeights(newWeights):
         nonlocal layerWeights 
         
@@ -84,7 +86,7 @@ def batchTraining(epoch, batchSize, model, labels, images):
     newModel = model
     for i in range(epoch):
         for j in range(batchSize):
-            newModel= gradientDescent(newModel, batchLabels[j], batchImages[j])
+            newModel= gradientDescent(newModel, batchLabels[j], batchImages[j],0.1 , int(100/(i+1)))
     return newModel
 
 # =============================================================================
@@ -100,16 +102,16 @@ def batchTraining(epoch, batchSize, model, labels, images):
 #          return value
 #     return gradientDescent(f, gradF, newPoint, stepSize, threshold)
 # =============================================================================
-def gradientDescent(model,labels, images, stepSize=0.02, threshold=2):
+def gradientDescent(model,labels, images, stepSize=.1, threshold=100):
     approxLabels = numpy.zeros((len(images), 10), dtype=object)
-    newApproxLabels = numpy.zeros((len(images)), dtype=object)
+    newApproxLabels = numpy.zeros((len(images),10), dtype=object)
     
     newWeights = numpy.zeros( (len(images), len(model)), dtype=object)
     
     while(numpy.linalg.norm(approxLabels - labels) > threshold):
-        print('***** current distance of batch *****')
+ #       print('***** current distance of batch *****')
         print(numpy.linalg.norm(approxLabels - labels))
-        print('*************************************')
+#        print('*************************************')
 
         for imageIndex, image in enumerate(images):
             layerValues = numpy.zeros((len(model)+1), dtype=object)
@@ -120,24 +122,30 @@ def gradientDescent(model,labels, images, stepSize=0.02, threshold=2):
             ## init values
             layerValues[0] = numpy.transpose(image)
 
+
+            # value = f(point)
             for layerIndex,layer in enumerate(model):
-                layerValues[layerIndex+1] = layer.activationFunction(layerValues[layerIndex])
+                layerValues[layerIndex+1] = layer.activationFunction(layerValues[layerIndex], layer.weights())
             approxLabels[imageIndex] = layerValues[-1]
 
 
+            #newPoint = point - stepSize * gradF(point)
             for layerIndex,layer in enumerate(model):
                 ## e.g layer1: (781,1) -> (100,1) // layer2: (100,1) -> (10,1)  
-                gradStep = stepSize *  layer.gradientActivationFunction(layerValues[layerIndex])
+                gradStep = stepSize * layer.gradientActivationFunction(layerValues[layerIndex], layer.weights())
                 ## e.g layerValues: lV[0]:(781,1) , lV[1]:(100,1), lV[2]:(10,1) 
-                newWeights[imageIndex][layerIndex] =  layerValues[layerIndex+1] - gradStep
+                newWeights[imageIndex][layerIndex] = layer.weights() - gradStep 
                 ## newWeights[imageIndex][layerIndex]
                 ## e.g nW[x][0] (100,1) // nW[x][1] (10,1)
                 
-            newLayerValues[0] = layerValues[1]
             
+                
+            newLayerValues[0] = numpy.transpose(image)
+            
+            #newValue = f(newPoint)
             # go back through model using new values
             for layerIndex,layer in enumerate(model):
-                newLayerValues[layerIndex+1] =  layer.activationFunction(newLayerValues[layerIndex], newWeights[imageIndex][layerIndex])
+                newLayerValues[layerIndex+1] = layer.activationFunction(newLayerValues[layerIndex], newWeights[imageIndex][layerIndex])
             
             newApproxLabels[imageIndex] = newLayerValues[-1]
        
@@ -155,14 +163,12 @@ def averageArray(X, size ):
 
 def updateWeights(model, newWeights):
     for layerIndex, layer in enumerate(model):
-        print('*** OLD Weights***')
-        print(layer.weights())
         layer.setWeights(newWeights[layerIndex])
-        print('*** NEW Weights***')
-        print(layer.weights())
+        
+        
 
 def testModel(model, images):
-    approxLabels = numpy.zeros((len(images)), dtype=object)
+    approxLabels = numpy.zeros((len(images),10), dtype=object)
 
     for imageIndex, image in enumerate(images):
         layerOutput = image
@@ -172,12 +178,12 @@ def testModel(model, images):
     return approxLabels
 
 def compareResults(approxLabels, labels):
-    print('******')
-    print(numpy.lingalg.norm( approxLabels - labels ))
+    print('******', approxLabels.shape, labels.shape)
+    print(numpy.linalg.norm( approxLabels - labels ))
     print('******')
     
-def feed_forward_network(trainingLabels, trainingImages, epochs=2, batchSize=10, learningRate=3.0):      
-    model= [ hiddenLayer(100, 784, sigmoid_neuron, 10), hiddenLayer(10,100, sigmoid_neuron) ]
+def feed_forward_network(trainingLabels, trainingImages, epochs=5, batchSize=10, learningRate=3.0):      
+    model= [ hiddenLayer(100, 784, sigmoid_neuron, 100), hiddenLayer(10,100, sigmoid_neuron) ]
     return batchTraining(epochs, batchSize, model, trainingLabels, trainingImages)        
 
 trainingDataFrame, testDataFrame = getTrainAndTest(mnistDataFrame)
