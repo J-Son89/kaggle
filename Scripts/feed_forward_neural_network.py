@@ -56,16 +56,14 @@ def getTrainAndTest(dataframe, percentTrain=0.7):
     test_df = dataframe.iloc[divider:len(dataframe)]
     return [train_df,test_df]
 
-def hiddenLayer(layerSize=100, length=784, func=sigmoid_neuron, bias=0 ):
+def hiddenLayer(layerSize=100, length=784, func=sigmoid_neuron ):
     # weights matrix as a dataframe 
     layerWeights = numpy.random.normal(0, 1, size=(layerSize,length))
-    def activationFunction(inputValue, weights=layerWeights): 
+    def activationFunction(inputValue, weights, bias): 
         return func(numpy.dot(weights, inputValue ), bias)
     ## derivative of sigmoidNeuron = (SN)*(1-SN)
-    def gradientActivationFunction(inputValue, weights=layerWeights): 
-        nonlocal layerWeights 
-        #return sigmoid_neuronGrad(layerWeights)
-        return func( weights )* (1-func(weights))
+    def gradientActivationFunction( weights, bias): 
+        return func( weights, bias )* (1-func(weights,bias))
     def setWeights(newWeights):
         nonlocal layerWeights 
         
@@ -83,11 +81,11 @@ def getBatch(batch, labels, images):
 
 def batchTraining(epoch, batchSize, model, labels, images):
     batchLabels, batchImages = getBatch(batchSize, labels, images)
-    newModel = model
+    
     for i in range(epoch):
         for j in range(batchSize):
-            newModel= gradientDescent(newModel, batchLabels[j], batchImages[j],0.1 , int(100/(i+1)))
-    return newModel
+            gradientDescent(model, batchLabels[j], batchImages[j])
+    return 
 
 # =============================================================================
 #    General idea for gradient descent 
@@ -102,16 +100,19 @@ def batchTraining(epoch, batchSize, model, labels, images):
 #          return value
 #     return gradientDescent(f, gradF, newPoint, stepSize, threshold)
 # =============================================================================
-def gradientDescent(model,labels, images, stepSize=.1, threshold=100):
-    approxLabels = numpy.zeros((len(images), 10), dtype=object)
+def gradientDescent(model,labels, images, stepSize=.1, threshold=0.001):
+    approxLabels = numpy.ones((len(images), 10), dtype=object)
     newApproxLabels = numpy.zeros((len(images),10), dtype=object)
     
     newWeights = numpy.zeros( (len(images), len(model)), dtype=object)
-    
-    while(numpy.linalg.norm(approxLabels - labels) > threshold):
- #       print('***** current distance of batch *****')
+    iter =0
+    diff = stepSize* numpy.linalg.norm(approxLabels - labels )/2
+    while(abs(numpy.linalg.norm(approxLabels - labels) -  numpy.linalg.norm(newApproxLabels - labels,'fro')) > threshold and iter <100 ):
+ #      print('***** current distance of batch *****')
         print(numpy.linalg.norm(approxLabels - labels))
-#        print('*************************************')
+        print(numpy.linalg.norm(newApproxLabels - labels))
+
+ #      print('*************************************')
 
         for imageIndex, image in enumerate(images):
             layerValues = numpy.zeros((len(model)+1), dtype=object)
@@ -125,33 +126,27 @@ def gradientDescent(model,labels, images, stepSize=.1, threshold=100):
 
             # value = f(point)
             for layerIndex,layer in enumerate(model):
-                layerValues[layerIndex+1] = layer.activationFunction(layerValues[layerIndex], layer.weights())
-            approxLabels[imageIndex] = layerValues[-1]
+                layerValues[layerIndex+1] = layer.activationFunction(layerValues[layerIndex], layer.weights(), diff)
 
-
-            #newPoint = point - stepSize * gradF(point)
-            for layerIndex,layer in enumerate(model):
-                ## e.g layer1: (781,1) -> (100,1) // layer2: (100,1) -> (10,1)  
-                gradStep = stepSize * layer.gradientActivationFunction(layerValues[layerIndex], layer.weights())
-                ## e.g layerValues: lV[0]:(781,1) , lV[1]:(100,1), lV[2]:(10,1) 
+               
+                gradStep = stepSize * layer.gradientActivationFunction(layer.weights(), diff) 
                 newWeights[imageIndex][layerIndex] = layer.weights() - gradStep 
-                ## newWeights[imageIndex][layerIndex]
-                ## e.g nW[x][0] (100,1) // nW[x][1] (10,1)
                 
+            approxLabels[imageIndex] = layerValues[-1]
+  
             
                 
             newLayerValues[0] = numpy.transpose(image)
             
-            #newValue = f(newPoint)
-            # go back through model using new values
+            
             for layerIndex,layer in enumerate(model):
-                newLayerValues[layerIndex+1] = layer.activationFunction(newLayerValues[layerIndex], newWeights[imageIndex][layerIndex])
+                newLayerValues[layerIndex+1] = layer.activationFunction(newLayerValues[layerIndex], newWeights[imageIndex][layerIndex], diff)
             
             newApproxLabels[imageIndex] = newLayerValues[-1]
-       
+            diff = stepSize* numpy.linalg.norm(approxLabels - labels )/2
         updateWeights(model, averageArray(newWeights, len(model)) )        
-            
-    return model
+        iter+=1
+    return 
 
 def averageArray(X, size ):
     average = numpy.zeros(size , dtype=object)
@@ -173,7 +168,7 @@ def testModel(model, images):
     for imageIndex, image in enumerate(images):
         layerOutput = image
         for layer in model:
-            layerOutput = layer.activationFunction(layerOutput)
+            layerOutput = layer.activationFunction(layerOutput, 0)
         approxLabels[imageIndex] = layerOutput
     return approxLabels
 
@@ -183,7 +178,7 @@ def compareResults(approxLabels, labels):
     print('******')
     
 def feed_forward_network(trainingLabels, trainingImages, epochs=5, batchSize=10, learningRate=3.0):      
-    model= [ hiddenLayer(100, 784, sigmoid_neuron, 100), hiddenLayer(10,100, sigmoid_neuron) ]
+    model= [ hiddenLayer(100, 784, sigmoid_neuron), hiddenLayer(10,100, sigmoid_neuron) ]
     return batchTraining(epochs, batchSize, model, trainingLabels, trainingImages)        
 
 trainingDataFrame, testDataFrame = getTrainAndTest(mnistDataFrame)
