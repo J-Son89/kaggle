@@ -50,7 +50,7 @@ def getLabelsAndImagesInNumpy(dataframe):
     return [labelVectors,images]
     
 
-def getTrainAndTest(dataframe, percentTrain=0.7):
+def getTrainAndTest(dataframe, percentTrain=0.025):
     divider = math.floor(len(dataframe)*percentTrain)
     train_df = dataframe.iloc[0:divider]
     test_df = dataframe.iloc[divider:len(dataframe)]
@@ -85,7 +85,7 @@ def batchTraining(epoch, batchSize, model, labels, images):
     for i in range(epoch):
         for j in range(batchSize):
             gradientDescent(model, batchLabels[j], batchImages[j])
-    return 
+    return model
 
 # =============================================================================
 #    General idea for gradient descent 
@@ -100,17 +100,18 @@ def batchTraining(epoch, batchSize, model, labels, images):
 #          return value
 #     return gradientDescent(f, gradF, newPoint, stepSize, threshold)
 # =============================================================================
-def gradientDescent(model,labels, images, stepSize=.1, threshold=0.001):
+def gradientDescent(model,labels, images, stepSize=.01, threshold=0.001):
     approxLabels = numpy.ones((len(images), 10), dtype=object)
     newApproxLabels = numpy.zeros((len(images),10), dtype=object)
-    
+    print('***newbatch')
     newWeights = numpy.zeros( (len(images), len(model)), dtype=object)
     iter =0
-    diff = stepSize* numpy.linalg.norm(approxLabels - labels )/2
-    while(abs(numpy.linalg.norm(approxLabels - labels) -  numpy.linalg.norm(newApproxLabels - labels,'fro')) > threshold and iter <100 ):
+    bias = stepSize* numpy.linalg.norm(approxLabels - labels )/len(images)
+    while(abs(numpy.linalg.norm(approxLabels - labels) -  numpy.linalg.norm(newApproxLabels - labels)) > threshold and iter <30 ):
  #      print('***** current distance of batch *****')
-        print(numpy.linalg.norm(approxLabels - labels))
-        print(numpy.linalg.norm(newApproxLabels - labels))
+        #print('*Approx',numpy.linalg.norm(approxLabels - labels))
+       # print('*newApprox',numpy.linalg.norm(newApproxLabels - labels))
+        #print('*diff',abs(numpy.linalg.norm(approxLabels - labels) - numpy.linalg.norm(newApproxLabels - labels)))
 
  #      print('*************************************')
 
@@ -126,10 +127,10 @@ def gradientDescent(model,labels, images, stepSize=.1, threshold=0.001):
 
             # value = f(point)
             for layerIndex,layer in enumerate(model):
-                layerValues[layerIndex+1] = layer.activationFunction(layerValues[layerIndex], layer.weights(), diff)
+                layerValues[layerIndex+1] = layer.activationFunction(layerValues[layerIndex], layer.weights(), bias)
 
                
-                gradStep = stepSize * layer.gradientActivationFunction(layer.weights(), diff) 
+                gradStep = stepSize * layer.gradientActivationFunction(layer.weights(), bias) 
                 newWeights[imageIndex][layerIndex] = layer.weights() - gradStep 
                 
             approxLabels[imageIndex] = layerValues[-1]
@@ -140,12 +141,13 @@ def gradientDescent(model,labels, images, stepSize=.1, threshold=0.001):
             
             
             for layerIndex,layer in enumerate(model):
-                newLayerValues[layerIndex+1] = layer.activationFunction(newLayerValues[layerIndex], newWeights[imageIndex][layerIndex], diff)
+                newLayerValues[layerIndex+1] = layer.activationFunction(newLayerValues[layerIndex], newWeights[imageIndex][layerIndex], bias)
             
             newApproxLabels[imageIndex] = newLayerValues[-1]
-            diff = stepSize* numpy.linalg.norm(approxLabels - labels )/2
+            bias = stepSize* numpy.linalg.norm(approxLabels - labels )/len(images)
         updateWeights(model, averageArray(newWeights, len(model)) )        
         iter+=1
+    print('*finaldiff',abs(numpy.linalg.norm(approxLabels - labels) - numpy.linalg.norm(newApproxLabels - labels)))
     return 
 
 def averageArray(X, size ):
@@ -177,7 +179,7 @@ def compareResults(approxLabels, labels):
     print(numpy.linalg.norm( approxLabels - labels ))
     print('******')
     
-def feed_forward_network(trainingLabels, trainingImages, epochs=5, batchSize=10, learningRate=3.0):      
+def feed_forward_network(trainingLabels, trainingImages, epochs=1, batchSize=10, learningRate=3.0):      
     model= [ hiddenLayer(100, 784, sigmoid_neuron), hiddenLayer(10,100, sigmoid_neuron) ]
     return batchTraining(epochs, batchSize, model, trainingLabels, trainingImages)        
 
