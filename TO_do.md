@@ -3,3 +3,8 @@
 1. slice the mnist_train.csv file using pandas into A.training set~(70%), B.validation set~(10%) and C. test set~(20%)
 2. create a different matrix for the labels with dummy variables (one hot encoding)!
 3. create neuron, non-linearity function, stochastic gradient descent, batches and cost function.
+
+## 1/11/2020
+1. Need to find a way to make gradientdescent a function of the cost function which is in turn
+a function of the weights.
+2. Then test Graddesc on mini batch size n=10 to average and find a relatively suitable set of weights
